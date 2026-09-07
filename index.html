@@ -180,14 +180,14 @@ const SUBS = {
       {name:'Red Bull, 8.4 oz', mg:80}, {name:'Monster, 16 oz', mg:160}, {name:'Black tea', mg:47},
       {name:'Green tea', mg:28}, {name:'Cola, 12 oz', mg:34}
     ],
-    defaults:{ taper:5, goal:100, window:7, baseline:null, start:null, cutoff:4 }
+    defaults:{ taper:4.5, goal:95, window:7, baseline:1000, start:null, cutoff:4 }
   },
   dph: {
     label:'Benadryl', unit:'mg', snap:12.5, minAxis:25,
     presets:[
       {name:'1 tablet', mg:25}, {name:'Half tablet', mg:12.5}, {name:'2 tablets', mg:50}
     ],
-    defaults:{ taper:10, goal:0, window:7, baseline:null, start:null, cutoff:12 }
+    defaults:{ taper:2.7, goal:0, window:7, baseline:100, start:null, cutoff:12 }
   }
 };
 const KEY = 'taper:state';
