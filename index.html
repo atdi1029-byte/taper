@@ -284,6 +284,12 @@
   .custom-form.open{display:block; animation:rowIn .3s ease-out}
   .custom-form .row{margin-top:0}
   .custom-form .row + .row{margin-top:8px}
+  .frac-picker{position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%) scale(.9); opacity:0; pointer-events:none; z-index:8; background:var(--surface); border:1px solid var(--hair); border-radius:14px; padding:6px; display:flex; gap:4px; box-shadow:0 12px 32px -8px rgba(0,0,0,.35); transition:opacity .15s ease, transform .15s cubic-bezier(.175,.885,.32,1.275); white-space:nowrap}
+  .frac-picker.show{opacity:1; pointer-events:auto; transform:translateX(-50%) scale(1)}
+  .frac-picker::after{content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--surface)}
+  .frac-btn{border:0; background:var(--soft); color:var(--ink); font:inherit; font-size:13px; font-weight:700; padding:8px 12px; border-radius:10px; cursor:pointer; transition:background .15s, transform .15s cubic-bezier(.175,.885,.32,1.275)}
+  .frac-btn:active{transform:scale(.9)}
+  .frac-btn:hover{background:var(--accent); color:var(--accent-ink)}
 
   .float{position:fixed; z-index:9; pointer-events:none; font-weight:800; color:var(--accent); font-size:18px; transform:translate(-50%,-50%); animation:floatUp .9s cubic-bezier(.2,.8,.2,1) forwards; text-shadow:0 2px 10px var(--glow)}
   @keyframes floatUp{0%{opacity:0; transform:translate(-50%,-30%) scale(.8)} 15%{opacity:1; transform:translate(-50%,-60%) scale(1.05)} 100%{opacity:0; transform:translate(-50%,-190%) scale(1)}}
@@ -1145,12 +1151,79 @@ function loadSample(){
   toast('Sample data loaded');
 }
 
+// ---------- fraction picker ----------
+let fracPicker = null; // { chipEl, drinkId }
+let longPressTimer = null;
+let longPressTriggered = false;
+function showFracPicker(chipEl, drink){
+  closeFracPicker();
+  const fracs = [['¼', 0.25], ['⅓', 1/3], ['½', 0.5], ['¾', 0.75], ['Full', 1]];
+  const pop = document.createElement('div');
+  pop.className = 'frac-picker';
+  fracs.forEach(([label, mult]) => {
+    const mg = Math.round(drink.mg * mult);
+    const btn = document.createElement('button');
+    btn.className = 'frac-btn';
+    btn.textContent = label;
+    btn.title = withUnit(mode, mg);
+    btn.dataset.fracMult = mult;
+    btn.dataset.fracDrink = drink.id;
+    pop.appendChild(btn);
+  });
+  chipEl.style.position = 'relative';
+  chipEl.appendChild(pop);
+  requestAnimationFrame(() => pop.classList.add('show'));
+  fracPicker = { chipEl, drinkId: drink.id, el: pop };
+}
+function closeFracPicker(){
+  if (fracPicker) { fracPicker.el.remove(); fracPicker = null; }
+}
+// close picker when tapping outside
+document.addEventListener('mousedown', e => { if (fracPicker && !fracPicker.el.contains(e.target) && !fracPicker.chipEl.contains(e.target)) closeFracPicker(); });
+document.addEventListener('touchstart', e => { if (fracPicker && !fracPicker.el.contains(e.target) && !fracPicker.chipEl.contains(e.target)) closeFracPicker(); }, { passive: true });
+
+// long-press on chips
+document.addEventListener('pointerdown', e => {
+  const chip = e.target.closest('.chip[data-drink]');
+  if (!chip || editing) return;
+  longPressTriggered = false;
+  longPressTimer = setTimeout(() => {
+    longPressTriggered = true;
+    if (navigator.vibrate) { try { navigator.vibrate(15); } catch(err) {} }
+    const d = (S.drinks[mode] || []).find(x => x.id === chip.dataset.drink);
+    if (d) showFracPicker(chip, d);
+  }, 400);
+});
+document.addEventListener('pointerup', () => { clearTimeout(longPressTimer); });
+document.addEventListener('pointercancel', () => { clearTimeout(longPressTimer); });
+document.addEventListener('pointermove', e => {
+  if (longPressTimer && (Math.abs(e.movementX) > 5 || Math.abs(e.movementY) > 5)) clearTimeout(longPressTimer);
+});
+
 // ---------- events ----------
 document.addEventListener('click', e => {
+  // handle fraction button clicks
+  if (e.target.closest('.frac-btn')) {
+    const btn = e.target.closest('.frac-btn');
+    const mult = parseFloat(btn.dataset.fracMult);
+    const drinkId = btn.dataset.fracDrink;
+    const d = (S.drinks[mode] || []).find(x => x.id === drinkId);
+    if (d) {
+      const mg = Math.round(d.mg * mult);
+      const label = mult < 1 ? btn.textContent + ' ' + d.name : d.name;
+      const r = btn.getBoundingClientRect(); spawnFloat(r.left + r.width/2, r.top, '+' + withUnit(mode, mg));
+      if (navigator.vibrate) { try { navigator.vibrate(10); } catch(err) {} }
+      closeFracPicker();
+      addEntry(label, mg, null, d.icon);
+    }
+    return;
+  }
   const t = e.target.closest('button'); if (!t) return;
-  if (t.dataset.mode) { if (t.dataset.mode !== mode) { mode = t.dataset.mode; editing = false; closeForm(); render(); } return; }
+  if (t.dataset.mode) { if (t.dataset.mode !== mode) { mode = t.dataset.mode; editing = false; closeForm(); closeFracPicker(); render(); } return; }
   if (e.target.closest('[data-deldrink]')) { deleteDrink(e.target.closest('[data-deldrink]').dataset.deldrink); return; }
   if (t.dataset.drink) {
+    if (longPressTriggered) { longPressTriggered = false; return; }
+    if (fracPicker) { closeFracPicker(); return; }
     const d = (S.drinks[mode] || []).find(x => x.id === t.dataset.drink); if (!d) return;
     if (editing) { openForm(d); return; }
     const r = t.getBoundingClientRect(); spawnFloat(r.left + r.width/2, r.top, '+' + withUnit(mode, d.mg));
