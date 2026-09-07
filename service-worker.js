@@ -1,4 +1,4 @@
-const CACHE_NAME = 'taper-v3';
+const CACHE_NAME = 'taper-v4';
 const ASSETS = [
   './',
   './index.html',
