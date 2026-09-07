@@ -359,14 +359,15 @@ function localInputValue(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+
 // ---------- storage ----------
 function seedDrinks(sub){ return SUBS[sub].drinks.map(d => ({ id: uid(), name: d.name, mg: d.mg != null ? d.mg : d.pills * 25, icon: d.icon })); }
 function defaultState(){
-  return { version:3, entries:[], drinks:{ caf:seedDrinks('caf'), dph:seedDrinks('dph') },
+  return { version:4, entries:[], deletedIds:[], drinks:{ caf:seedDrinks('caf'), dph:seedDrinks('dph') },
     settings:{ caf:Object.assign({}, SUBS.caf.defaults), dph:Object.assign({}, SUBS.dph.defaults) } };
 }
 function migrate(s){
   const d = defaultState();
   const out = {
-    version:3,
+    version:4,
     entries: Array.isArray(s.entries) ? s.entries : [],
+    deletedIds: Array.isArray(s.deletedIds) ? s.deletedIds : [],
     drinks: { caf: [], dph: [] },
     settings: {
       caf: Object.assign({}, d.settings.caf, (s.settings||{}).caf||{}),
@@ -415,19 +416,28 @@ function load(){
     if (raw) s = JSON.parse(raw);
   } catch(e) {}
   S = s ? migrate(s) : defaultState();
-  // Pull cloud data in background, merge if newer
+  // Pull cloud data in background, merge respecting deletedIds
   jsonpFetch(SYNC_URL + '?action=taper_get', function(err, resp){
     if (err || !resp || resp.status !== 'ok' || !resp.taper) return;
     try {
       const cloud = migrate(resp.taper);
-      if (cloud.entries.length > S.entries.length) {
-        // Cloud has more data — merge by taking unique entries
-        const ids = new Set(S.entries.map(e => e.id));
-        cloud.entries.forEach(e => { if (!ids.has(e.id)) S.entries.push(e); });
-        saveLocal(); render();
-      } else if (cloud.entries.length && S.entries.length === 0) {
-        S = cloud; saveLocal(); render();
+      if (!S.entries.length && !S.deletedIds.length) {
+        // Empty local — take cloud wholesale
+        S = cloud; saveLocal(); render(); return;
       }
+      // Merge deletedIds from both sides
+      const delSet = new Set(S.deletedIds);
+      (cloud.deletedIds || []).forEach(id => delSet.add(id));
+      S.deletedIds = Array.from(delSet);
+      // Merge entries: union minus anything deleted on either side
+      const localIds = new Set(S.entries.map(e => e.id));
+      cloud.entries.forEach(e => { if (!localIds.has(e.id) && !delSet.has(e.id)) S.entries.push(e); });
+      S.entries = S.entries.filter(e => !delSet.has(e.id));
+      // Merge drinks, settings — prefer local if modified, cloud if local is default
+      ['caf','dph'].forEach(sub => {
+        if (!S.drinks[sub].length && cloud.drinks[sub].length) S.drinks[sub] = cloud.drinks[sub];
+      });
+      saveLocal(); render();
     } catch(e) { console.warn('Cloud merge failed', e); }
   });
 }
@@ -872,8 +882,13 @@ function deleteDrink(id){
 }
 function removeEntry(id){
   const e = S.entries.find(x => x.id === id); if (!e) return;
-  S.entries = S.entries.filter(x => x.id !== id); save(); render();
-  toast(`Removed ${e.name}`, () => { S.entries.push(e); save(); render(); });
+  S.entries = S.entries.filter(x => x.id !== id);
+  S.deletedIds.push(id);
+  save(); render();
+  toast(`Removed ${e.name}`, () => {
+    S.deletedIds = S.deletedIds.filter(x => x !== id);
+    S.entries.push(e); save(); render();
+  });
 }
 function loadSample(){
   const sub = mode, st = S.settings[sub];
@@ -950,6 +965,7 @@ document.addEventListener('click', e => {
   if (t.dataset.action === 'sample') { const wasOpen = $('#settings').open; loadSample(); $('#settings').open = wasOpen; window.scrollTo({ top:0, behavior: reduced ? 'auto' : 'smooth' }); return; }
   if (t.id === 'clear') {
     if (!confirm(`Remove every ${SUBS[mode].label} entry? Undo is not available for this.`)) return;
+    S.entries.filter(x => x.sub === mode).forEach(e => S.deletedIds.push(e.id));
     S.entries = S.entries.filter(x => x.sub !== mode); lastChartSub = null; save(); render(); $('#settings').open = true; return;
   }
   if (t.id === 'copyExport') {
