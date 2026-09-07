@@ -265,7 +265,7 @@
   .log .ico{width:22px; height:22px; color:var(--muted)}
   .chip:hover{border-color:var(--accent)}
   .chip:active{transform:scale(.93); transition:transform .06s ease-out}
-  .chip{transition:transform .25s cubic-bezier(.175,.885,.32,1.275), border-color .2s, background-color .5s}
+  .chip{transition:transform .25s cubic-bezier(.175,.885,.32,1.275), border-color .2s, background-color .5s; -webkit-touch-callout:none; touch-action:manipulation}
   .chip.custom{border-style:dashed; justify-content:center}
   .chip.custom.on{border-style:solid; border-color:var(--accent); background:var(--soft)}
   .chip{position:relative}
@@ -284,8 +284,8 @@
   .custom-form.open{display:block; animation:rowIn .3s ease-out}
   .custom-form .row{margin-top:0}
   .custom-form .row + .row{margin-top:8px}
-  .frac-picker{position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%) scale(.9); opacity:0; pointer-events:none; z-index:8; background:var(--surface); border:1px solid var(--hair); border-radius:14px; padding:6px; display:flex; gap:4px; box-shadow:0 12px 32px -8px rgba(0,0,0,.35); transition:opacity .15s ease, transform .15s cubic-bezier(.175,.885,.32,1.275); white-space:nowrap}
-  .frac-picker.show{opacity:1; pointer-events:auto; transform:translateX(-50%) scale(1)}
+  .frac-picker{position:fixed; z-index:99; background:var(--surface); border:1px solid var(--hair); border-radius:14px; padding:6px; display:flex; gap:4px; box-shadow:0 12px 32px -8px rgba(0,0,0,.35); transition:opacity .15s ease, transform .15s cubic-bezier(.175,.885,.32,1.275); white-space:nowrap; opacity:0; pointer-events:none}
+  .frac-picker.show{opacity:1; pointer-events:auto}
   .frac-picker::after{content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--surface)}
   .frac-btn{border:0; background:var(--soft); color:var(--ink); font:inherit; font-size:13px; font-weight:700; padding:8px 12px; border-radius:10px; cursor:pointer; transition:background .15s, transform .15s cubic-bezier(.175,.885,.32,1.275)}
   .frac-btn:active{transform:scale(.9)}
@@ -1170,8 +1170,14 @@ function showFracPicker(chipEl, drink){
     btn.dataset.fracDrink = drink.id;
     pop.appendChild(btn);
   });
-  chipEl.style.position = 'relative';
-  chipEl.appendChild(pop);
+  document.body.appendChild(pop);
+  // position above the chip
+  const r = chipEl.getBoundingClientRect();
+  const pw = pop.offsetWidth || 200;
+  let left = r.left + r.width / 2 - pw / 2;
+  left = Math.max(8, Math.min(window.innerWidth - pw - 8, left));
+  pop.style.left = left + 'px';
+  pop.style.top = (r.top - pop.offsetHeight - 10) + 'px';
   requestAnimationFrame(() => pop.classList.add('show'));
   fracPicker = { chipEl, drinkId: drink.id, el: pop };
 }
