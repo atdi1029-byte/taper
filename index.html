@@ -27,12 +27,12 @@
     background:var(--bg); color:var(--ink);
     font-family:ui-rounded, "SF Pro Rounded", -apple-system, system-ui, "Segoe UI", sans-serif;
     font-size:16px; line-height:1.4; font-variant-numeric:tabular-nums;
-    transition:background-color .5s ease, color .5s ease;
+    transition:background-color .8s cubic-bezier(.4,0,.2,1), color .6s ease;
     padding-bottom:132px; min-height:100vh;
   }
 
   /* atmosphere */
-  .sky{position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:0; transition:opacity .6s ease}
+  .sky{position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:0; transition:opacity 1.2s cubic-bezier(.4,0,.2,1)}
   .sky.day{
     background:
       radial-gradient(70% 45% at 15% -10%, rgba(255,196,120,.55), transparent 65%),
@@ -78,7 +78,7 @@
   .seg button[aria-selected="true"]{color:var(--accent-ink)}
   .seg:not(.ready) button[aria-selected="true"]{background:var(--accent)}
 
-  .card{background:var(--surface); border-radius:var(--radius); padding:18px; margin-bottom:12px; transition:background-color .5s ease}
+  .card{background:var(--surface); border-radius:var(--radius); padding:18px; margin-bottom:12px; transition:background-color .8s cubic-bezier(.4,0,.2,1), box-shadow .5s ease}
   .hero{position:relative; overflow:hidden; box-shadow:0 30px 70px -40px var(--glow), 0 1px 0 var(--hair) inset}
   .hero::before{content:""; position:absolute; inset:-40% -20% auto auto; width:60%; height:70%; background:radial-gradient(closest-side, var(--glow2), transparent); pointer-events:none}
   .cap{font-size:14px; font-weight:700; color:var(--muted); margin-bottom:4px; position:relative}
@@ -100,8 +100,12 @@
   .status strong{color:var(--ink); font-weight:800; font-size:20px}
   .status.over strong{color:var(--line)}
   .streak{display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:700; color:var(--ink); background:var(--soft); border-radius:999px; padding:6px 12px 6px 9px; width:max-content; max-width:100%}
-  .streak i{width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--glow); flex:none}
-  .streak.zero{color:var(--muted)} .streak.zero i{background:var(--hair); box-shadow:none}
+  .streak i{width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--glow); flex:none; animation:streakPulse 2.5s ease-in-out infinite}
+  @keyframes streakPulse{0%,100%{box-shadow:0 0 6px var(--glow)} 50%{box-shadow:0 0 14px var(--glow)}}
+  .streak.zero{color:var(--muted)} .streak.zero i{background:var(--hair); box-shadow:none; animation:none}
+  .dial-wrap.logged .dial .fill{animation:gaugeBump .4s cubic-bezier(.2,.8,.2,1); filter:drop-shadow(0 0 14px var(--glow))}
+  @keyframes gaugeBump{0%{stroke-width:14} 40%{stroke-width:18} 100%{stroke-width:14}}
+  .status:not(.over){text-shadow:0 0 20px var(--glow2)}
 
   .chart-head{display:flex; justify-content:space-between; align-items:center; margin-top:18px; gap:10px; flex-wrap:wrap}
   .range{display:flex; gap:2px; background:var(--soft); border-radius:999px; padding:2px}
@@ -134,6 +138,23 @@
   .chart:not(.first) .area{animation-duration:.35s; animation-delay:0s}
   .chart:not(.first) .ceil.future{animation-delay:.1s}
   .todayline{stroke:var(--hair); stroke-width:1; stroke-dasharray:2 4}
+  .today-glow{opacity:.55; animation:fade .6s ease-out both; animation-delay:.1s}
+  .today-dot{fill:var(--accent); filter:drop-shadow(0 0 6px var(--glow)); animation:pulse 2s ease-in-out infinite}
+  .today-ring{fill:none; stroke:var(--accent); stroke-width:1.5; opacity:.4; animation:ringPulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{r:4.5} 50%{r:6}}
+  @keyframes ringPulse{0%,100%{r:8; opacity:.4} 50%{r:11; opacity:0}}
+  .safe-zone{opacity:.08; animation:fade .8s ease-out both; animation-delay:.3s}
+  body[data-mode="night"] .safe-zone{opacity:.06}
+  .ceil-dot{fill:var(--line); opacity:.85}
+  .ceil-dot.future{opacity:.4}
+  .ceil.future{animation:marchForward 1.2s linear infinite, fade .5s ease-out both; animation-delay:0s, .6s}
+  @keyframes marchForward{to{stroke-dashoffset:-10}}
+  .milestone{font-size:9px; font-weight:800; font-family:inherit; letter-spacing:.03em}
+  .milestone.label{fill:var(--line); opacity:.85}
+  .milestone.pip{fill:var(--line); opacity:.7}
+  .milestone.reached .pip{fill:var(--accent); opacity:1}
+  .milestone.reached .label{fill:var(--accent); opacity:1}
+  .milestone-line{stroke:var(--line); stroke-width:1; stroke-dasharray:2 3; opacity:.25}
   @keyframes grow{from{transform:scaleY(0)} to{transform:scaleY(1)}}
   @keyframes draw{to{stroke-dashoffset:0}}
   @keyframes fade{from{opacity:0} to{opacity:1}}
@@ -146,25 +167,48 @@
   .facts b{color:var(--ink); font-weight:700}
   .note{color:var(--muted); font-size:14px; margin:10px 0 0}
   .note b{color:var(--ink); font-weight:700}
+  .journey{margin:14px 0 4px; padding:0 4px}
+  .journey-track{position:relative; height:4px; background:var(--hair); border-radius:2px}
+  .journey-fill{position:absolute; left:0; top:0; bottom:0; background:linear-gradient(90deg, var(--accent), var(--line)); border-radius:2px; transition:width 1s cubic-bezier(.2,.8,.2,1)}
+  .journey-mark{position:absolute; top:50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center}
+  .journey-mark .pip{width:10px; height:10px; border-radius:50%; border:2px solid var(--hair); background:var(--surface); transition:border-color .3s, background .3s, box-shadow .3s}
+  .journey-mark.reached .pip{border-color:var(--accent); background:var(--accent); box-shadow:0 0 8px var(--glow)}
+  .journey-mark .lbl{position:absolute; top:12px; font-size:9px; font-weight:800; color:var(--muted); white-space:nowrap; letter-spacing:.02em}
+  .journey-mark.reached .lbl{color:var(--accent)}
+  .journey-mark:first-child .lbl{transform:translateX(0); left:0}
+  .journey-mark:last-child .lbl{transform:translateX(0); right:0; left:auto}
   .empty-hero{margin-top:8px}
   .empty-hero .row{margin-top:14px}
 
   .grid2{display:grid; gap:12px}
   h2{font-size:17px; font-weight:800; margin:0 0 10px; display:flex; justify-content:space-between; align-items:baseline}
   h2 span{font-weight:600; color:var(--muted); font-size:14px}
-  .log{list-style:none; margin:0; padding:0}
-  .log li{display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--hair)}
-  .log li:first-child{border-top:0}
-  .log li.new{animation:rowIn .5s cubic-bezier(.2,.8,.2,1) both}
-  @keyframes rowIn{from{opacity:0; transform:translateY(-6px); background:var(--soft)} to{opacity:1; transform:none}}
-  .log .t{color:var(--muted); width:72px; flex:none; font-size:14px; font-weight:600}
-  .log .n{flex:1}
-  .log .mg{font-weight:700}
-  .x{border:0; background:transparent; color:var(--muted); font-size:22px; line-height:1; width:34px; height:34px; border-radius:10px; cursor:pointer; transition:background-color .15s, color .15s}
+  .timeline{list-style:none; margin:0; padding:0 0 0 18px; position:relative}
+  .timeline::before{content:''; position:absolute; left:7px; top:8px; bottom:8px; width:2px; background:var(--hair); border-radius:1px}
+  .timeline li{position:relative; padding:8px 0 8px 20px; display:flex; align-items:center; gap:10px}
+  .timeline li::before{content:''; position:absolute; left:-14px; top:50%; transform:translateY(-50%); width:8px; height:8px; border-radius:50%; border:2px solid var(--hair); background:var(--surface); z-index:1; transition:border-color .3s, background .3s, box-shadow .3s}
+  .timeline li.new{animation:rowIn .5s cubic-bezier(.2,.8,.2,1) both}
+  .timeline li.new::before{border-color:var(--accent); background:var(--accent); box-shadow:0 0 8px var(--glow)}
+  @keyframes rowIn{from{opacity:0; transform:translateY(-6px)} to{opacity:1; transform:none}}
+  .timeline li[data-pct="low"]::before{border-color:var(--accent); background:var(--accent); opacity:.5}
+  .timeline li[data-pct="med"]::before{border-color:var(--accent); background:var(--accent); opacity:.75}
+  .timeline li[data-pct="high"]::before{border-color:var(--accent); background:var(--accent)}
+  .timeline li[data-pct="over"]::before{border-color:var(--line); background:var(--line); box-shadow:0 0 6px rgba(198,58,69,.4)}
+  .timeline .t{color:var(--muted); width:60px; flex:none; font-size:13px; font-weight:600}
+  .timeline .n{flex:1; font-weight:600}
+  .timeline .mg{font-weight:700; font-size:14px}
+  .x{border:0; background:transparent; color:var(--muted); font-size:22px; line-height:1; width:34px; height:34px; border-radius:10px; cursor:pointer; transition:background-color .15s, color .15s, transform .15s}
   .x:hover{background:var(--soft); color:var(--ink)}
+  .x:active{transform:scale(.85)}
   .empty{color:var(--muted); font-size:14px; padding:6px 0}
   .dayhead{font-weight:700; margin:12px 0 2px; display:flex; justify-content:space-between}
   .dayhead span{color:var(--muted); font-weight:600}
+  .smart-moment{display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:var(--soft); font-size:14px; font-weight:600; color:var(--ink); margin:10px 0 6px; animation:slideIn .4s cubic-bezier(.2,.8,.2,1) both}
+  .smart-moment .emoji{font-size:18px; flex:none}
+  .smart-moment.over{background:rgba(198,58,69,.08); color:var(--line)}
+  .smart-moment.winning{background:rgba(184,98,27,.08)}
+  body[data-mode="night"] .smart-moment.winning{background:rgba(164,156,245,.1)}
+  @keyframes slideIn{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:none}}
 
   details{background:var(--surface); border-radius:var(--radius); margin-bottom:12px; transition:background-color .5s ease}
   details summary{cursor:pointer; padding:16px 18px; font-weight:800; font-size:17px; list-style:none; display:flex; justify-content:space-between; align-items:center}
@@ -182,15 +226,15 @@
   input:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--glow2); outline:none}
   .field input{width:122px}
   textarea{width:100%; min-height:90px; font-size:12px; font-family:ui-monospace, monospace}
-  .btn{font:inherit; font-weight:700; border:1px solid var(--hair); background:var(--surface); color:var(--ink); border-radius:12px; padding:10px 15px; cursor:pointer; transition:transform .08s ease, background-color .2s}
-  .btn:active{transform:scale(.97)}
+  .btn{font:inherit; font-weight:700; border:1px solid var(--hair); background:var(--surface); color:var(--ink); border-radius:12px; padding:10px 15px; cursor:pointer; transition:transform .3s cubic-bezier(.175,.885,.32,1.275), background-color .2s}
+  .btn:active{transform:scale(.94); transition:transform .06s ease-out}
   .btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); box-shadow:0 8px 20px -10px var(--glow)}
   .btn.danger{color:var(--line)}
   .row{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
   .row input{flex:1; min-width:90px}
   .hint{color:var(--muted); font-size:13px; margin:8px 0 0}
 
-  .tray{position:fixed; left:0; right:0; bottom:0; z-index:5; background:linear-gradient(to top, var(--bg) 70%, transparent); padding:22px 0 max(14px, env(safe-area-inset-bottom)); transition:background .5s ease}
+  .tray{position:fixed; left:0; right:0; bottom:0; z-index:5; background:linear-gradient(to top, var(--bg) 70%, transparent); padding:22px 0 max(14px, env(safe-area-inset-bottom)); transition:background .8s cubic-bezier(.4,0,.2,1)}
   .tray .inner{max-width:660px; margin:0 auto; padding:0 16px}
   .chips{display:flex; gap:8px; overflow-x:auto; padding:6px 0 6px; scrollbar-width:none}
   .chips::-webkit-scrollbar{display:none}
@@ -210,13 +254,18 @@
   .ico .ln{fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
   .ico .ln.thin{stroke-width:1.2; opacity:.55}
   .ico .ln.dash{stroke-dasharray:2 2.5; opacity:.5}
-  .ico .steam{opacity:.45}
+  .ico .steam{opacity:.45; animation:steamDrift 2.5s ease-in-out infinite alternate}
+  @keyframes steamDrift{0%{transform:translateY(0) scaleX(1); opacity:.45} 100%{transform:translateY(-1.5px) scaleX(1.1); opacity:.25}}
+  .ico .liq{transition:opacity .3s}
+  .chip:active .ico .liq{animation:liquidPulse .3s ease-out}
+  @keyframes liquidPulse{0%{opacity:.95} 50%{opacity:1; filter:brightness(1.2)} 100%{opacity:.95}}
   .ico .ice{fill:#fff; opacity:.85}
   .ico .ice-ln{fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; opacity:.85}
   .chip:hover .ico{transform:translateY(-1px)}
   .log .ico{width:22px; height:22px; color:var(--muted)}
   .chip:hover{border-color:var(--accent)}
-  .chip:active{transform:scale(.93)}
+  .chip:active{transform:scale(.93); transition:transform .06s ease-out}
+  .chip{transition:transform .25s cubic-bezier(.175,.885,.32,1.275), border-color .2s, background-color .5s}
   .chip.custom{border-style:dashed; justify-content:center}
   .chip.custom.on{border-style:solid; border-color:var(--accent); background:var(--soft)}
   .chip{position:relative}
@@ -263,8 +312,8 @@
     <div class="brand">Taper <span class="saved" id="saved">Saved</span></div>
     <div class="seg" role="tablist" aria-label="Substance">
       <div class="pill" aria-hidden="true"></div>
-      <button role="tab" data-mode="caf" aria-selected="true">Caffeine</button>
-      <button role="tab" data-mode="dph" aria-selected="false">Benadryl</button>
+      <button role="tab" data-mode="caf" aria-selected="true">☀️ Caffeine</button>
+      <button role="tab" data-mode="dph" aria-selected="false">🌙 Benadryl</button>
     </div>
   </header>
 
@@ -593,15 +642,33 @@ function chartSVG(ser, sub, first){
   const y = v => T + (H - T - B) * (1 - v * k / ymax);
   const f1 = v => v.toFixed(1);
   const ylabel = v => sub === 'dph' ? fmtPills(v) : fmt(v);
+  const yBottom = f1(H - B);
   let s = `<svg class="chart${first ? ' first' : ''}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Daily intake against the taper line">
   <defs>
     <linearGradient id="gbar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent); stop-opacity:.45"/></linearGradient>
     <linearGradient id="gover" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--line)"/><stop offset="1" style="stop-color:var(--line); stop-opacity:.45"/></linearGradient>
     <linearGradient id="garea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--ma); stop-opacity:.14"/><stop offset="1" style="stop-color:var(--ma); stop-opacity:0"/></linearGradient>
+    <linearGradient id="gtodayglow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--accent); stop-opacity:.18"/><stop offset=".7" style="stop-color:var(--accent); stop-opacity:.04"/><stop offset="1" style="stop-color:var(--accent); stop-opacity:0"/></linearGradient>
+    <linearGradient id="gsafe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--line); stop-opacity:.35"/><stop offset="1" style="stop-color:var(--line); stop-opacity:0"/></linearGradient>
   </defs>`;
   for (let v = step; v <= ymax + 0.001; v += step) s += `<line class="grid" x1="${L}" x2="${W-R}" y1="${f1(y(v/k))}" y2="${f1(y(v/k))}"/><text class="ylab" x="${L-6}" y="${f1(y(v/k)+4)}" text-anchor="end">${ylabel(v)}</text>`;
   const todayIdx = pts.findIndex(p => p.isToday);
-  if (todayIdx >= 0) s += `<line class="todayline" x1="${f1(x(todayIdx))}" x2="${f1(x(todayIdx))}" y1="${T}" y2="${f1(H-B)}"/>`;
+
+  // safe zone under the taper line
+  const ceilPts = [];
+  pts.forEach((p, i) => { if (p.ceil != null && !p.calib) ceilPts.push([x(i), y(p.ceil)]); });
+  if (ceilPts.length > 1) {
+    s += `<path class="safe-zone" fill="url(#gsafe)" d="M${f1(ceilPts[0][0])},${f1(ceilPts[0][1])} `;
+    ceilPts.forEach(q => { s += `L${f1(q[0])},${f1(q[1])} `; });
+    s += `L${f1(ceilPts[ceilPts.length-1][0])},${yBottom} L${f1(ceilPts[0][0])},${yBottom} Z"/>`;
+  }
+
+  // today column glow
+  if (todayIdx >= 0) {
+    const gw = Math.max(slot * 0.9, bw + 12);
+    s += `<rect class="today-glow" fill="url(#gtodayglow)" x="${f1(x(todayIdx)-gw/2)}" y="${T}" width="${f1(gw)}" height="${f1(H-B-T)}" rx="4"/>`;
+    s += `<line class="todayline" x1="${f1(x(todayIdx))}" x2="${f1(x(todayIdx))}" y1="${T}" y2="${yBottom}"/>`;
+  }
 
   // area under the moving average
   const maPts = [];
@@ -629,6 +696,74 @@ function chartSVG(ser, sub, first){
   if (past.length > 1) s += `<polyline class="ceil drawn" pathLength="1" points="${past.join(' ')}"/>`;
   const last = past.length ? past[past.length-1] : calib.length ? calib[calib.length-1] : null;
   if (fut.length && last) s += `<polyline class="ceil future" points="${[last].concat(fut).join(' ')}"/>`;
+
+  // dots on the taper line
+  pts.forEach((p, i) => {
+    if (p.ceil == null || p.calib) return;
+    const dotR = p.future ? 2 : 2.8;
+    const everyN = n > 40 ? 3 : n > 20 ? 2 : 1;
+    if (!p.isToday && !p.future && i % everyN !== 0) return;
+    s += `<circle class="ceil-dot${p.future ? ' future' : ''}" cx="${f1(x(i))}" cy="${f1(y(p.ceil))}" r="${dotR}"/>`;
+  });
+
+  // glowing today marker on the taper line
+  if (todayIdx >= 0 && pts[todayIdx].ceil != null && !pts[todayIdx].calib) {
+    const tx = x(todayIdx), ty = y(pts[todayIdx].ceil);
+    s += `<circle class="today-ring" cx="${f1(tx)}" cy="${f1(ty)}" r="8"/>`;
+    s += `<circle class="today-dot" cx="${f1(tx)}" cy="${f1(ty)}" r="4.5"/>`;
+  }
+
+  // milestone markers along the taper line
+  if (!ser.calibrating && ser.baseline != null) {
+    const st = S.settings[sub], cfg = SUBS[sub];
+    const goal = Math.max(0, Number(st.goal) || 0);
+    const bl = ser.baseline * k;
+    const gl = goal * k;
+    // pick milestones: round numbers between baseline and goal
+    const milestones = [];
+    // always add START
+    milestones.push({ val: bl, label: 'START', reached: true });
+    // intermediate round milestones
+    const mStep = bl > 500 ? 100 : bl > 200 ? 50 : bl > 50 ? 25 : 10;
+    for (let m = Math.floor(bl / mStep) * mStep - mStep; m > gl; m -= mStep) {
+      if (m <= 0 || m >= bl * 0.95) continue;
+      if (m <= gl * 1.05) continue;
+      milestones.push({ val: m, label: fmtU(sub, m / k), reached: false });
+    }
+    // mark reached milestones based on the taper line's current position
+    const todayCeil = pts[todayIdx] ? pts[todayIdx].ceil : null;
+    if (todayCeil != null) {
+      milestones.forEach(ms => {
+        if (ms.val !== bl && todayCeil * k <= ms.val) ms.reached = true;
+      });
+    }
+    // add GOAL
+    milestones.push({ val: gl, label: 'GOAL', reached: ser.atGoal });
+    // find where each milestone intersects the taper line
+    milestones.forEach(ms => {
+      // find the chart point closest to this ceiling value
+      let bestI = -1, bestDist = Infinity;
+      pts.forEach((p, i) => {
+        if (p.ceil == null || p.calib) return;
+        const dist = Math.abs(p.ceil * k - ms.val);
+        if (dist < bestDist) { bestDist = dist; bestI = i; }
+      });
+      if (bestI < 0) return;
+      const mx = x(bestI), my = y(ms.val / k);
+      // only draw if there's room (not too close to edges)
+      if (my < T + 8 || my > H - B - 4) return;
+      // dashed line across
+      s += `<line class="milestone-line" x1="${L}" x2="${f1(mx - 4)}" y1="${f1(my)}" y2="${f1(my)}"/>`;
+      // diamond pip
+      const cls = ms.reached ? ' reached' : '';
+      s += `<g class="milestone${cls}">`;
+      s += `<polygon class="pip" points="${f1(mx)},${f1(my-4)} ${f1(mx+3.5)},${f1(my)} ${f1(mx)},${f1(my+4)} ${f1(mx-3.5)},${f1(my)}"/>`;
+      // label on the left
+      s += `<text class="label" x="${f1(L + 2)}" y="${f1(my - 5)}">${ms.label}</text>`;
+      s += '</g>';
+    });
+  }
+
   const labelEvery = n > 70 ? 28 : n > 40 ? 14 : n > 20 ? 7 : n > 10 ? 4 : 2;
   pts.forEach((p, i) => {
     if (p.isToday || i === 0 || (i % labelEvery === 0 && !p.future)) {
@@ -636,7 +771,7 @@ function chartSVG(ser, sub, first){
       s += `<text class="xlab${p.isToday?' today':''}" x="${f1(x(i))}" y="${H-8}" text-anchor="middle">${t}</text>`;
     }
   });
-  s += `<line class="hoverline" id="hoverline" x1="0" x2="0" y1="${T}" y2="${f1(H-B)}" visibility="hidden"/>`;
+  s += `<line class="hoverline" id="hoverline" x1="0" x2="0" y1="${T}" y2="${yBottom}" visibility="hidden"/>`;
   s += '</svg>';
   chartMeta = { pts, W, H, L, R, T, B, slot, x, y };
   return s;
@@ -740,10 +875,33 @@ function renderHero(){
     } else {
       const maRel = today.ma <= c ? 'under' : 'over';
       let proj = '';
-      if (ser.atGoal) proj = 'The line is at your goal.';
+      if (ser.atGoal) { proj = '🎉 The line has reached your goal!'; setTimeout(() => { const el = $('.dial-wrap'); if (el) { const r = el.getBoundingClientRect(); celebrate(r.left + r.width/2, r.top + r.height/2); } }, 600); }
       else if (ser.goalDate) proj = `At ${st.taper}% a week the line reaches ${withUnit(sub, st.goal)} around ${longDate(ser.goalDate)}.`;
       html += `<div class="facts"><span>${st.window}-day average <b>${withUnit(sub, today.ma)}</b>, ${maRel} the line</span><span>Started from <b>${withUnit(sub, ser.baseline)}</b></span></div>`;
       if (proj) html += `<p class="note">${proj}</p>`;
+      // milestone journey bar
+      if (ser.baseline != null) {
+        const goal = Math.max(0, Number(st.goal) || 0);
+        const bl = ser.baseline;
+        const currentLine = c || bl;
+        const totalDrop = bl - goal;
+        const dropped = totalDrop > 0 ? Math.min(1, Math.max(0, (bl - currentLine) / totalDrop)) : (ser.atGoal ? 1 : 0);
+        const mStep = bl > 500 * per(sub) ? 100 * per(sub) : bl > 200 * per(sub) ? 50 * per(sub) : bl > 50 * per(sub) ? 25 * per(sub) : 10 * per(sub);
+        const marks = [{v:bl, l:'START'}];
+        for (let m = Math.floor(bl / mStep) * mStep - mStep; m > goal; m -= mStep) {
+          if (m <= 0 || m >= bl * 0.95 || m <= goal * 1.05) continue;
+          marks.push({v:m, l:fmtU(sub, m)});
+        }
+        marks.push({v:goal, l:'GOAL'});
+        let journey = '<div class="journey"><div class="journey-track"><div class="journey-fill" style="width:' + (dropped*100).toFixed(1) + '%"></div>';
+        marks.forEach(mk => {
+          const pct = totalDrop > 0 ? ((bl - mk.v) / totalDrop * 100) : (mk.v === goal ? 100 : 0);
+          const reached = totalDrop > 0 ? currentLine <= mk.v : false;
+          journey += `<div class="journey-mark${reached || mk.v === bl ? ' reached' : ''}" style="left:${pct.toFixed(1)}%"><span class="pip"></span><span class="lbl">${mk.l}</span></div>`;
+        });
+        journey += '</div></div>';
+        html += journey;
+      }
     }
   }
   $('#hero').innerHTML = html;
@@ -765,21 +923,69 @@ function renderHero(){
   gaugePrev[sub] = pct;
 }
 
+function smartMoment(sub, todayTotal, ceil, streak){
+  const hr = new Date().getHours();
+  if (ceil == null) return '';
+  const left = ceil - todayTotal;
+  const pct = ceil > 0 ? todayTotal / ceil : 0;
+  let msg = '', emoji = '', cls = '';
+  if (todayTotal === 0 && hr < 12) {
+    emoji = '☀️'; msg = 'Good morning. 100% of today\'s line available.';
+  } else if (todayTotal === 0) {
+    emoji = '✨'; msg = `Nothing logged yet. ${withUnit(sub, ceil)} available today.`;
+  } else if (pct > 1) {
+    emoji = '📍'; msg = `Over the line by ${withUnit(sub, todayTotal - ceil)}. Tomorrow is a fresh start.`; cls = ' over';
+  } else if (pct > 0.85) {
+    emoji = '⚡'; msg = `Getting close — ${withUnit(sub, left)} remaining.`;
+  } else if (pct > 0.4) {
+    emoji = '👍'; msg = `${withUnit(sub, left)} left under today's line.`;
+  } else if (streak >= 7) {
+    emoji = '🔥'; msg = `${streak} day streak. Keep it going.`; cls = ' winning';
+  } else if (streak >= 3) {
+    emoji = '🎯'; msg = `${streak} days under the line in a row.`; cls = ' winning';
+  } else {
+    emoji = '✅'; msg = `On track. ${withUnit(sub, left)} left today.`;
+  }
+  return `<div class="smart-moment${cls}"><span class="emoji">${emoji}</span><span>${msg}</span></div>`;
+}
 function renderLog(){
   const sub = mode, st = S.settings[sub];
   const today = todayKey(sub);
   const mine = S.entries.filter(e => e.sub === sub).sort((a, b) => b.ts.localeCompare(a.ts));
   const byDay = {};
   mine.forEach(e => { const k = dayKey(e.ts, st.cutoff); (byDay[k] = byDay[k] || []).push(e); });
-  const row = e => `<li${e.id === newEntryId ? ' class="new"' : ''}><span class="t">${timeOf(e.ts)}</span>${icon(iconFor(e, sub))}<span class="n">${esc(e.name)}</span><span class="mg">${withUnit(sub, e.mg)}</span><button class="x" data-del="${e.id}" aria-label="Remove ${esc(e.name)}">×</button></li>`;
-  const todays = byDay[today] || [];
-  let html = `<h2>Today <span>${todays.length ? withUnit(sub, todays.reduce((a, e) => a + e.mg, 0)) : ''}</span></h2>`;
-  html += todays.length ? `<ul class="log">${todays.map(row).join('')}</ul>` : `<p class="empty">Nothing logged yet today.</p>`;
+  const todays = (byDay[today] || []).sort((a,b) => a.ts.localeCompare(b.ts));
+  const todayTotal = todays.reduce((a, e) => a + e.mg, 0);
+  // compute running total for budget indicator
+  const ser = series(sub);
+  const todayDay = ser.days[ser.days.length - 1];
+  const ceil = todayDay ? todayDay.ceil : null;
+  const row = (e, runTotal) => {
+    let pct = 'low';
+    if (ceil != null && ceil > 0) {
+      const ratio = runTotal / ceil;
+      if (ratio > 1) pct = 'over';
+      else if (ratio > 0.75) pct = 'high';
+      else if (ratio > 0.4) pct = 'med';
+    }
+    return `<li data-pct="${pct}"${e.id === newEntryId ? ' class="new"' : ''}><span class="t">${timeOf(e.ts)}</span>${icon(iconFor(e, sub))}<span class="n">${esc(e.name)}</span><span class="mg">${withUnit(sub, e.mg)}</span><button class="x" data-del="${e.id}" aria-label="Remove ${esc(e.name)}">×</button></li>`;
+  };
+  let html = `<h2>Today <span>${todays.length ? withUnit(sub, todayTotal) : ''}</span></h2>`;
+  // smart moment
+  html += smartMoment(sub, todayTotal, ceil, ser.streak || 0);
+  if (todays.length) {
+    let running = 0;
+    html += `<ul class="timeline">${todays.map(e => { running += e.mg; return row(e, running); }).join('')}</ul>`;
+  } else {
+    html += `<p class="empty">Nothing logged yet today.</p>`;
+  }
   const earlier = Object.keys(byDay).filter(k => k !== today).sort().reverse().slice(0, 14);
   if (earlier.length) {
     html += `<details style="margin:10px 0 0; background:transparent"><summary style="padding:6px 0; font-size:15px; font-weight:700; color:var(--muted)">Earlier days</summary>`;
     earlier.forEach(k => {
-      html += `<div class="dayhead">${longDate(k)}<span>${withUnit(sub, byDay[k].reduce((a, e) => a + e.mg, 0))}</span></div><ul class="log">${byDay[k].map(row).join('')}</ul>`;
+      const dayEntries = byDay[k].sort((a,b) => a.ts.localeCompare(b.ts));
+      let running = 0;
+      html += `<div class="dayhead">${longDate(k)}<span>${withUnit(sub, dayEntries.reduce((a, e) => a + e.mg, 0))}</span></div><ul class="timeline">${dayEntries.map(e => { running += e.mg; return row(e, running); }).join('')}</ul>`;
     });
     html += `</details>`;
   }
@@ -870,9 +1076,28 @@ function spawnFloat(x, y, text){
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 1000);
 }
+function celebrate(cx, cy){
+  if (reduced) return;
+  const colors = ['var(--accent)', 'var(--line)', '#FFD700', '#4CAF50', '#FF6B9D'];
+  for (let i = 0; i < 18; i++) {
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;z-index:9;pointer-events:none;width:6px;height:6px;border-radius:50%;background:${colors[i%colors.length]};left:${cx}px;top:${cy}px;`;
+    const angle = (i / 18) * Math.PI * 2;
+    const dist = 40 + Math.random() * 60;
+    const dx = Math.cos(angle) * dist, dy = Math.sin(angle) * dist - 30;
+    el.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: `translate(${dx}px,${dy}px) scale(0)`, opacity: 0 }
+    ], { duration: 700 + Math.random() * 300, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+  }
+}
 function addEntry(name, mg, ts, iconKey){
   const e = { id: uid(), sub: mode, ts: ts || new Date().toISOString(), name, mg, icon: iconKey };
   S.entries.push(e); newEntryId = e.id; save(); render();
+  // gauge bump
+  const dw = $('.dial-wrap'); if (dw) { dw.classList.add('logged'); setTimeout(() => dw.classList.remove('logged'), 500); }
   toast(`Logged ${name}, ${withUnit(mode, mg)}`, () => { S.entries = S.entries.filter(x => x.id !== e.id); save(); render(); });
 }
 function deleteDrink(id){
