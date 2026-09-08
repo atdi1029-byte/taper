@@ -353,7 +353,7 @@ const SUBS = {
       {name:'Red Bull, 8.4 oz', mg:80, icon:'can'}, {name:'Monster, 16 oz', mg:160, icon:'bigcan'}, {name:'Black tea', mg:47, icon:'tea'},
       {name:'Green tea', mg:28, icon:'tea'}, {name:'Cola, 12 oz', mg:34, icon:'soda'}
     ],
-    defaults:{ taper:4.5, goal:95, window:7, baseline:null, start:null, cutoff:4 }
+    defaults:{ taper:4.5, goal:95, window:14, baseline:null, start:null, cutoff:4 }
   },
   dph: {
     label:'Benadryl', snap:0.5, minAxis:2, icons:['quarter','half','threeq','tablet','onehalf','two'],
@@ -361,7 +361,7 @@ const SUBS = {
       {name:'¼ pill', pills:0.25, icon:'quarter'}, {name:'½ pill', pills:0.5, icon:'half'}, {name:'¾ pill', pills:0.75, icon:'threeq'},
       {name:'1 pill', pills:1, icon:'tablet'}, {name:'1½ pills', pills:1.5, icon:'onehalf'}, {name:'2 pills', pills:2, icon:'two'}
     ],
-    defaults:{ taper:5.5, goal:0, window:7, baseline:null, start:null, cutoff:12, tabMg:25 }
+    defaults:{ taper:5.5, goal:0, window:14, baseline:null, start:null, cutoff:12, tabMg:25 }
   }
 };
 // ---------- units: entries and settings are stored in mg; Benadryl is shown in pills ----------
@@ -433,6 +433,11 @@ function migrate(s){
     // v1 shipped with fixed baselines that squashed the chart; back to auto
     if (out.settings.caf.baseline === 1000) out.settings.caf.baseline = null;
     if (out.settings.dph.baseline === 100) out.settings.dph.baseline = null;
+  }
+  // v3: moving average window 7 → 14
+  if ((s.version || 1) < 3) {
+    if (out.settings.caf.window === 7) out.settings.caf.window = 14;
+    if (out.settings.dph.window === 7) out.settings.dph.window = 14;
   }
   ['caf', 'dph'].forEach(sub => {
     const have = s.drinks && Array.isArray(s.drinks[sub]) ? s.drinks[sub] : null;
@@ -1048,7 +1053,7 @@ function renderSettings(){
   let html = '';
   html += f('taper', 'Drop per week', 'Percent the line falls each week', `type="number" min="0" max="50" step="0.5" value="${st.taper}"`);
   html += f('goal', 'Goal', `${sub === 'dph' ? 'Pills' : 'mg'} per ${sub === 'dph' ? 'night' : 'day'} where the line stops`, `type="number" min="0" step="${sub === 'dph' ? 0.25 : 1}" value="${sub === 'dph' ? toU(sub, st.goal) : st.goal}"`);
-  html += f('window', 'Average window', 'Days in the moving average and calibration', `type="number" min="3" max="14" step="1" value="${st.window}"`);
+  html += f('window', 'Average window', 'Days in the moving average and calibration', `type="number" min="3" max="28" step="1" value="${st.window}"`);
   html += f('baseline', 'Baseline', `Leave blank to use your first days${sub === 'dph' ? ', in pills' : ''}`, `type="number" min="0" step="${sub === 'dph' ? 0.25 : 1}" value="${st.baseline == null ? '' : (sub === 'dph' ? toU(sub, st.baseline) : st.baseline)}" placeholder="auto"`);
   if (sub === 'dph') html += f('tabMg', 'Tablet strength', 'mg in one pill, so history stays exact if you switch', `type="number" min="1" step="1" value="${st.tabMg || 25}"`);
   html += f('start', 'Start date', 'Leave blank to use your first entry', `type="date" value="${st.start || ''}"`);
@@ -1289,7 +1294,7 @@ document.addEventListener('change', e => {
   const st = S.settings[mode]; const v = e.target.value;
   if (key === 'start') st.start = v || null;
   else if (key === 'baseline') st.baseline = v === '' ? null : (mode === 'dph' ? toMg(mode, Math.max(0, parseFloat(v))) : Math.max(0, parseFloat(v)));
-  else if (key === 'window') st.window = Math.min(14, Math.max(3, parseInt(v, 10) || 7));
+  else if (key === 'window') st.window = Math.min(28, Math.max(3, parseInt(v, 10) || 14));
   else if (key === 'cutoff') st.cutoff = Math.min(12, Math.max(0, parseInt(v, 10) || 0));
   else if (key === 'taper') st.taper = Math.min(50, Math.max(0, parseFloat(v) || 0));
   else if (key === 'goal') st.goal = mode === 'dph' ? toMg(mode, Math.max(0, parseFloat(v) || 0)) : Math.max(0, parseFloat(v) || 0);
