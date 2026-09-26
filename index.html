@@ -540,8 +540,8 @@ function save(){
 // ---------- model ----------
 function series(sub){
   const st = S.settings[sub], cfg = SUBS[sub];
-  const totals = {};
-  S.entries.filter(e => e.sub === sub).forEach(e => { const k = dayKey(e.ts, st.cutoff); totals[k] = (totals[k]||0) + e.mg; });
+  const totals = {}, counts = {};
+  S.entries.filter(e => e.sub === sub).forEach(e => { const k = dayKey(e.ts, st.cutoff); totals[k] = (totals[k]||0) + e.mg; counts[k] = (counts[k]||0) + 1; });
   const keys = Object.keys(totals).sort();
   const today = todayKey(sub);
   let start = st.start || keys[0] || null;
@@ -552,18 +552,19 @@ function series(sub){
 
   const n = daysBetween(start, today);
   const days = [];
-  for (let i = 0; i <= n; i++){ const k = addDays(start, i); days.push({ k, i, total: totals[k]||0, isToday: i === n }); }
+  // days with nothing logged are treated as missed logging: skipped by the averages, calibration and streak
+  for (let i = 0; i <= n; i++){ const k = addDays(start, i); days.push({ k, i, total: totals[k]||0, logged: !!counts[k], isToday: i === n }); }
 
   const manual = st.baseline != null && st.baseline !== '';
   let baseline, lockDay = 0, calibrating = false;
-  const completed = days.slice(0, days.length - 1);
+  const completed = days.slice(0, days.length - 1).filter(d => d.logged);
   out.completed = completed.length;
   if (manual) { baseline = Number(st.baseline); lockDay = 0; }
-  else {
-    lockDay = st.window;
-    if (completed.length >= st.window) baseline = mean(completed.slice(0, st.window).map(d => d.total));
-    else { calibrating = true; baseline = completed.length ? mean(completed.map(d => d.total)) : days[days.length-1].total; }
+  else if (completed.length >= st.window) {
+    baseline = mean(completed.slice(0, st.window).map(d => d.total));
+    lockDay = completed[st.window - 1].i + 1;
   }
+  else { calibrating = true; lockDay = Infinity; baseline = completed.length ? mean(completed.map(d => d.total)) : days[days.length-1].total; }
   const r = 1 - st.taper/100;
   const floor = Math.max(0, Number(st.goal) || 0);
   const snapAt = floor < cfg.snap ? cfg.snap : null;
@@ -575,14 +576,14 @@ function series(sub){
     return c;
   };
   days.forEach((d, i) => {
-    const w = days.slice(Math.max(0, i - st.window + 1), i + 1);
-    d.ma = mean(w.map(x => x.total));
+    const w = days.slice(Math.max(0, i - st.window + 1), i + 1).filter(x => x.logged);
+    d.ma = w.length ? mean(w.map(x => x.total)) : null;
     d.ceil = calibrating && !manual ? baseline : ceil(i);
     d.calib = !manual && i < lockDay;
   });
 
   let streak = 0;
-  if (!calibrating) for (let i = days.length - 2; i >= 0; i--) { const d = days[i]; if (d.calib || d.ceil == null || d.total > d.ceil + 0.01) break; streak++; }
+  if (!calibrating) for (let i = days.length - 2; i >= 0; i--) { const d = days[i]; if (d.calib || d.ceil == null) break; if (!d.logged) continue; if (d.total > d.ceil + 0.01) break; streak++; }
   out.streak = streak;
 
   const target = Math.max(floor, snapAt != null ? snapAt : floor);
@@ -800,6 +801,7 @@ function showTip(clientX){
   let html = `<b>${p.isToday ? 'Today' : longDate(p.k)}</b>`;
   const sub = mode;
   if (p.future) html += `<br>line ${withUnit(sub, p.ceil)}`;
+  else if (!p.logged && !p.isToday) html += `<br>nothing logged, skipped<br>line ${p.ceil != null ? withUnit(sub, p.ceil) : '–'}`;
   else html += `<br><span class="${over ? 'o' : ''}">${withUnit(sub, p.total)}</span> of ${p.ceil != null ? fmtU(sub, p.ceil) : '–'} line<br>avg ${withUnit(sub, p.ma)}`;
   tip.innerHTML = html;
   const box = $('#hero .chart-box').getBoundingClientRect();
@@ -882,13 +884,13 @@ function renderHero(){
     html += `<div class="chart-head"><div class="legend"><span><i class="sw-bar"></i>daily</span><span><i class="sw-ma"></i>${st.window}-day avg</span><span><i class="sw-line"></i>the line</span></div><div class="range">${rb(28,'4 wk')}${rb(84,'3 mo')}${rb(Infinity,'All')}</div></div>`;
     html += `<div class="chart-box">${chartSVG(ser, sub, first)}<div class="tip" id="tip"></div></div>`;
     if (ser.calibrating) {
-      html += `<p class="note"><b>Calibrating, ${ser.completed} of ${st.window} days.</b> The line locks in from your first ${st.window} days, then drops ${st.taper}% a week toward ${withUnit(sub, st.goal)}.</p>`;
+      html += `<p class="note"><b>Calibrating, ${ser.completed} of ${st.window} logged days.</b> The line locks in from your first ${st.window} logged days (days with nothing logged are skipped), then drops ${st.taper}% a week toward ${withUnit(sub, st.goal)}.</p>`;
     } else {
-      const maRel = today.ma <= c ? 'under' : 'over';
+      const maRel = today.ma == null ? 'no logged days in the window' : today.ma <= c ? 'under the line' : 'over the line';
       let proj = '';
       if (ser.atGoal) { proj = '🎉 The line has reached your goal!'; setTimeout(() => { const el = $('.dial-wrap'); if (el) { const r = el.getBoundingClientRect(); celebrate(r.left + r.width/2, r.top + r.height/2); } }, 600); }
       else if (ser.goalDate) proj = `At ${st.taper}% a week the line reaches ${withUnit(sub, st.goal)} around ${longDate(ser.goalDate)}.`;
-      html += `<div class="facts"><span>${st.window}-day average <b>${withUnit(sub, today.ma)}</b>, ${maRel} the line</span><span>Started from <b>${withUnit(sub, ser.baseline)}</b></span></div>`;
+      html += `<div class="facts"><span>${st.window}-day average <b>${withUnit(sub, today.ma)}</b>, ${maRel}</span><span>Started from <b>${withUnit(sub, ser.baseline)}</b></span></div>`;
       if (proj) html += `<p class="note">${proj}</p>`;
       // milestone journey bar
       if (ser.baseline != null) {
